@@ -1,0 +1,11 @@
+# Ignore installer and generated tarball files
+1cserver-*.tar
+Docker/server/setup-full-*.run
+
+# Ignore Docker build artifacts and temporary files
+Docker/onec_base/*.tar
+Docker/server/*.tar
+
+# System files
+.DS_Store
+Thumbs.db
