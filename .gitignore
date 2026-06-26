@@ -9,3 +9,6 @@ Docker/server/*.tar
 # System files
 .DS_Store
 Thumbs.db
+
+# Git metadata
+.gitignore
