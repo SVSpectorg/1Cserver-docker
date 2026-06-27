@@ -46,4 +46,6 @@ echo "Команда для запуска образа:
         --network host \\
         -v /home/usr1cv8/.1cv8:/home/usr1cv8/.1cv8 \\
         -v /var/1C/licenses:/var/1C/licenses \\
+        -v /etc/localtime:/etc/localtime:ro \\
+        -v /etc/timezone:/etc/timezone:ro \\
         $SERVER_IMAGE"
