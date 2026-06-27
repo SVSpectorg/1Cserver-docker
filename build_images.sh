@@ -22,12 +22,17 @@ fi
 SERVER_IMAGE="1cserver:${VERSION}"
 ARCHIVE="1cserver-${VERSION}.tar"
 
+#Сборка базового образа
 #docker build --platform linux/x86-64 -t onec_base Docker/onec_base
-docker build --platform linux/x86-64 --build-arg VERSION="$VERSION" -t "$SERVER_IMAGE" Docker/server
-docker save -o "$ARCHIVE" "$SERVER_IMAGE"
 
+#Установка 1cserver в базовый образ
+docker build --platform linux/x86-64 --build-arg VERSION="$VERSION" -t "$SERVER_IMAGE" Docker/server
+
+#Подготовка архива образа
+docker save -o "$ARCHIVE" "$SERVER_IMAGE"
 echo "Built image $SERVER_IMAGE and saved archive $ARCHIVE"
 
+#Копирование архива на сервер
 scp 1cserver-8.3.27.2214.tar mtp_admin@192.168.3.3:/home/mtp_admin
 
 echo "Архив $ARCHIVE скопирован на сервер 1С
