@@ -7,6 +7,7 @@ Docker/onec_base/*.tar
 Docker/server/*.tar
 
 # System files
+.vscode
 .DS_Store
 Thumbs.db
 
