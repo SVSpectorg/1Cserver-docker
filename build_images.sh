@@ -23,7 +23,7 @@ SERVER_IMAGE="1cserver:${VERSION}"
 ARCHIVE="1cserver-${VERSION}.tar"
 
 #Сборка базового образа
-#docker build --platform linux/x86-64 -t onec_base Docker/onec_base
+docker build --platform linux/x86-64 -t onec_base Docker/onec_base
 
 #Установка 1cserver в базовый образ
 docker build --platform linux/x86-64 --build-arg VERSION="$VERSION" -t "$SERVER_IMAGE" Docker/server

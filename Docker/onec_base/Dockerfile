@@ -15,7 +15,7 @@ RUN apt-get update \
     libgstreamer1.0-0 \
     libgstreamer-plugins-base1.0-0 \
     libodbc2 \
-    libwebkit2gtk-4.0-37 \
+    libwebkit2gtk-4.1-0 \
     unixodbc \
     ca-certificates \
     && locale-gen ru_RU.UTF-8 \
