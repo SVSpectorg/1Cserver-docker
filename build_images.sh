@@ -33,7 +33,7 @@ docker save -o "$ARCHIVE" "$SERVER_IMAGE"
 echo "Built image $SERVER_IMAGE and saved archive $ARCHIVE"
 
 #Копирование архива на сервер
-scp 1cserver-8.3.27.2214.tar mtp_admin@192.168.3.3:/home/mtp_admin
+scp 1cserver-$VERSION.tar mtp_admin@192.168.3.3:/home/mtp_admin
 
 echo "Архив $ARCHIVE скопирован на сервер 1С
         Для его загрузки в Docker выполнить:
@@ -48,4 +48,5 @@ echo "Команда для запуска образа:
         -v /var/1C/licenses:/var/1C/licenses \\
         -v /etc/localtime:/etc/localtime:ro \\
         -v /etc/timezone:/etc/timezone:ro \\
+        -v /_SHARE/exchange:/_SHARE/exchange \\
         $SERVER_IMAGE"
