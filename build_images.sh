@@ -48,5 +48,7 @@ echo "Команда для запуска образа:
         -v /var/1C/licenses:/var/1C/licenses \\
         -v /etc/localtime:/etc/localtime:ro \\
         -v /etc/timezone:/etc/timezone:ro \\
+        -v /usr/share/fonts:/usr/share/fonts:ro \\
+        -v /etc/fonts:/etc/fonts:ro \\
         -v /_SHARE/exchange:/_SHARE/exchange \\
         $SERVER_IMAGE"
