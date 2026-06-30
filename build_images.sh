@@ -49,6 +49,4 @@ echo "Команда для запуска образа:
         -v /etc/localtime:/etc/localtime:ro \\
         -v /etc/timezone:/etc/timezone:ro \\
         -v /_SHARE/exchange:/_SHARE/exchange \\
-        -v /usr/share/fonts:/usr/share/fonts:ro \
-        -v /etc/fonts:/etc/fonts:ro \
         $SERVER_IMAGE"

@@ -17,6 +17,10 @@ RUN apt-get update \
     libodbc2 \
     libwebkit2gtk-4.1-0 \
     unixodbc \
+    fonts-dejavu \
+    fonts-liberation \
+    fonts-freefont-ttf \
+    ttf-mscorefonts-installer \
     ca-certificates \
     && locale-gen ru_RU.UTF-8 \
     && localedef -i ru_RU -c -f UTF-8 -A /usr/share/locale/locale.alias ru_RU.UTF-8 \
