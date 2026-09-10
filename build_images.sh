@@ -143,5 +143,20 @@ case "$TARGET" in
 esac
 
 echo
-echo "Команда для запуска образа:"
-echo "docker run -d \\\n    --name 1cserver-$VERSION \\\n    --restart unless-stopped \\\n    --network host \\\n    -v /home/usr1cv8/.1cv8:/home/usr1cv8/.1cv8 \\\n    -v /var/1C/licenses:/var/1C/licenses \\\n    -v /etc/localtime:/etc/localtime:ro \\\n    -v /etc/timezone:/etc/timezone:ro \\\n    -v /usr/share/fonts:/usr/share/fonts:ro \\\n    -v /etc/fonts:/etc/fonts:ro \\\n    -v /_SHARE/exchange:/_SHARE/exchange \\\n    $SERVER_IMAGE"
+echo "============================================================"
+echo "Команда для запуска образа $SERVER_IMAGE:"
+echo "============================================================"
+cat <<EOF
+docker run -d \
+    --name 1cserver-$VERSION \
+    --restart unless-stopped \
+    --network host \
+    -v /home/usr1cv8/.1cv8:/home/usr1cv8/.1cv8 \
+    -v /var/1C/licenses:/var/1C/licenses \
+    -v /etc/localtime:/etc/localtime:ro \
+    -v /etc/timezone:/etc/timezone:ro \
+    -v /usr/share/fonts:/usr/share/fonts:ro \
+    -v /etc/fonts:/etc/fonts:ro \
+    -v /_SHARE/exchange:/_SHARE/exchange \
+    $SERVER_IMAGE
+EOF
