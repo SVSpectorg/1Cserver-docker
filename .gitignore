@@ -13,3 +13,6 @@ Thumbs.db
 
 # Git metadata
 .gitignore
+
+# Local server settings
+/build_images.local.conf

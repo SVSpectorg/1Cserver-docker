@@ -57,15 +57,24 @@ esac
 TARGET=${BUILD_TARGET:-$TARGET}
 VERSION=${VERSION_OVERRIDE:-$VERSION}
 
-OLD_1C_NAME="Старый сервер 1С"
-OLD_1C_USER="mtp_admin"
-OLD_1C_HOST="192.168.3.3"
-OLD_1C_DIR="/home/mtp_admin"
+# Необязательный локальный shell-конфиг рядом со скриптом (не хранить в Git).
+# Загружать только доверенный файл; его значения имеют приоритет над окружением.
+LOCAL_CONFIG="$(dirname "$0")/build_images.local.conf"
+if [ -f "$LOCAL_CONFIG" ]; then
+    . "$LOCAL_CONFIG"
+fi
 
-KA_1C_NAME="Новый сервер КА"
-KA_1C_USER="adminkaserver"
-KA_1C_HOST="192.168.3.198"
-KA_1C_DIR="/home/adminkaserver"
+# Для выбранных серверов обязательны *_USER, *_HOST и *_DIR.
+# *_NAME — необязательная подпись.
+OLD_1C_NAME=${OLD_1C_NAME:-old}
+OLD_1C_USER=${OLD_1C_USER:-}
+OLD_1C_HOST=${OLD_1C_HOST:-}
+OLD_1C_DIR=${OLD_1C_DIR:-}
+
+KA_1C_NAME=${KA_1C_NAME:-ka}
+KA_1C_USER=${KA_1C_USER:-}
+KA_1C_HOST=${KA_1C_HOST:-}
+KA_1C_DIR=${KA_1C_DIR:-}
 
 get_version_from_installer() {
     set -- Docker/server/setup-full*.run
@@ -251,6 +260,22 @@ fi
 if [ -z "$TARGET" ]; then
     choose_target
 fi
+
+# Проверить все выбранные серверы до первого scp, включая режим both.
+case "$TARGET" in
+    old|1|both|3)
+        : "${OLD_1C_USER:?Задайте OLD_1C_USER}"
+        : "${OLD_1C_HOST:?Задайте OLD_1C_HOST}"
+        : "${OLD_1C_DIR:?Задайте OLD_1C_DIR}"
+        ;;
+esac
+case "$TARGET" in
+    ka|2|both|3)
+        : "${KA_1C_USER:?Задайте KA_1C_USER}"
+        : "${KA_1C_HOST:?Задайте KA_1C_HOST}"
+        : "${KA_1C_DIR:?Задайте KA_1C_DIR}"
+        ;;
+esac
 
 case "$TARGET" in
     old|1)
