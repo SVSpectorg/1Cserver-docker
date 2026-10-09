@@ -12,7 +12,8 @@ ENV SERVER_VERSION=${VERSION}
 
 # Копируем entrypoint
 COPY server/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh \
+    && chmod +x /entrypoint.sh
 
 RUN usermod -u 999 usr1cv8 && groupmod -g 1001 grp1cv8
 USER usr1cv8
