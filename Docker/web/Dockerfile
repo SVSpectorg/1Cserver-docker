@@ -32,7 +32,8 @@ RUN mkdir -p /var/www/mcp-api /var/www/html \
     && ln -sf ../sites-available/1c-api.conf /etc/apache2/sites-enabled/1c-api.conf
 
 COPY web/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh \
+    && chmod +x /entrypoint.sh
 
 EXPOSE 8081
 
