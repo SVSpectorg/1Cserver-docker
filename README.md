@@ -1,6 +1,6 @@
 # 1C Server Docker
 
-Проект собирает два согласованных Docker-образа 1С:Enterprise одной версии:
+Проект собирает согласованные Docker-образы 1С:Enterprise одной версии:
 
 - `1cserver:<version>` — серверный кластер 1С (`ragent`, `ras`);
 - `1cweb:<version>` — Apache + web-extension 1С (`wsap24.so`, `webinst`) для HTTP/Web services.
@@ -32,11 +32,50 @@ Docker/server/setup-full-8.5.1.1529-x86_64.run
 
 ## Сборка
 
+По умолчанию собираются оба образа:
+
 ```bash
 sh ./build_images.sh
+sh ./build_images.sh both
 ```
 
-Либо сразу с выбором назначения:
+Можно явно выбрать, что собирать:
+
+```bash
+# Оба образа
+sh ./build_images.sh all both
+
+# Только сервер 1С
+sh ./build_images.sh server both
+
+# Только web-extension
+sh ./build_images.sh web both
+```
+
+Второй параметр определяет, куда копировать готовый TAR:
+
+```text
+old   - старый сервер 1С
+ka    - сервер 1С КА
+both  - оба сервера
+none  - только собрать локально, не копировать
+```
+
+Примеры:
+
+```bash
+sh ./build_images.sh server old
+sh ./build_images.sh server ka
+sh ./build_images.sh server both
+sh ./build_images.sh server none
+
+sh ./build_images.sh web old
+sh ./build_images.sh web ka
+sh ./build_images.sh web both
+sh ./build_images.sh web none
+```
+
+Старый синтаксис сохранён и означает сборку обоих образов:
 
 ```bash
 sh ./build_images.sh old
@@ -45,20 +84,29 @@ sh ./build_images.sh both
 sh ./build_images.sh none
 ```
 
-Скрипт:
-
-1. определяет версию из имени установщика;
-2. при необходимости собирает `onec_base`;
-3. собирает `1cserver:<version>`;
-4. собирает `1cweb:<version>`;
-5. сохраняет:
-   - `1cserver-<version>.tar`;
-   - `1cweb-<version>.tar`;
-6. копирует **оба архива** на выбранный сервер или на оба сервера.
-
 ## Только копирование
 
-Без пересборки:
+Без пересборки можно выбрать конкретный образ:
+
+```bash
+# Оба
+sh ./build_images.sh copy all both
+
+# Только server
+sh ./build_images.sh copy server both
+
+# Только web
+sh ./build_images.sh copy web both
+```
+
+Можно копировать на один сервер:
+
+```bash
+sh ./build_images.sh copy web old
+sh ./build_images.sh copy web ka
+```
+
+Старый синтаксис также работает и означает `all`:
 
 ```bash
 sh ./build_images.sh copy old
@@ -69,10 +117,35 @@ sh ./build_images.sh copy both
 Если версия не определяется автоматически:
 
 ```bash
-sh ./build_images.sh copy both 8.5.1.1529
+sh ./build_images.sh copy web both 8.5.1.1529
+sh ./build_images.sh copy server both 8.5.1.1529
+sh ./build_images.sh copy all both 8.5.1.1529
 ```
 
 Если TAR отсутствует, но соответствующий Docker image существует локально, скрипт создаст TAR через `docker save`.
+
+## Что создаётся
+
+Для `all`:
+
+```text
+1cserver-<version>.tar
+1cweb-<version>.tar
+```
+
+Для `server`:
+
+```text
+1cserver-<version>.tar
+```
+
+Для `web`:
+
+```text
+1cweb-<version>.tar
+```
+
+На выбранный сервер копируются только архивы выбранного режима.
 
 ## Локальные настройки серверов
 
