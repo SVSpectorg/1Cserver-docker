@@ -1,0 +1,5 @@
+# Keep executable/config text files in Unix format.
+*.sh text eol=lf
+Dockerfile text eol=lf
+Docker/**/Dockerfile text eol=lf
+*.conf text eol=lf
