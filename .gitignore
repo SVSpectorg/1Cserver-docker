@@ -1,10 +1,12 @@
 # Ignore installer and generated tarball files
 1cserver-*.tar
+1cweb-*.tar
 Docker/server/setup-full-*.run
 
 # Ignore Docker build artifacts and temporary files
 Docker/onec_base/*.tar
 Docker/server/*.tar
+Docker/web/*.tar
 
 # System files
 .vscode
