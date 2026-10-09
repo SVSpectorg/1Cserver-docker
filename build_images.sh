@@ -5,61 +5,107 @@ set -eu
 # =============================================================================
 # 1C Docker image builder / copier
 #
-# Собираются два образа одной версии:
-#   1cserver:<version>
-#   1cweb:<version>
+# Что собирать:
+#   all     - 1cserver + 1cweb (по умолчанию)
+#   server  - только 1cserver
+#   web     - только 1cweb
 #
-# Обычная сборка:
-#   sh ./build_images.sh
-#   sh ./build_images.sh ka
-#   sh ./build_images.sh old
+# Куда копировать:
+#   old | ka | both | none
+#
+# Примеры:
 #   sh ./build_images.sh both
-#   sh ./build_images.sh none
+#   sh ./build_images.sh server both
+#   sh ./build_images.sh web both
+#   sh ./build_images.sh all both
 #
 # Только копирование, без сборки:
-#   sh ./build_images.sh copy ka
-#   sh ./build_images.sh copy old
 #   sh ./build_images.sh copy both
+#   sh ./build_images.sh copy server both
+#   sh ./build_images.sh copy web both
+#   sh ./build_images.sh copy all both
 #
-# Если нужно явно указать версию для copy:
-#   sh ./build_images.sh copy both 8.5.1.1529
+# Явная версия для copy:
+#   sh ./build_images.sh copy web both 8.5.1.1529
 #
 # Принудительно пересобрать onec_base:
-#   FORCE_BASE_REBUILD=1 sh ./build_images.sh both
+#   FORCE_BASE_REBUILD=1 sh ./build_images.sh web both
+#
+# Обратная совместимость:
+#   sh ./build_images.sh old|ka|both|none
+#   sh ./build_images.sh copy old|ka|both [version]
 # =============================================================================
 
 ACTION="build"
+IMAGE_TARGET="all"
 TARGET=""
 VERSION=""
 
 case "${1:-}" in
     copy)
         ACTION="copy"
-        TARGET="${2:-}"
-        VERSION="${3:-}"
+        case "${2:-}" in
+            all|server|web)
+                IMAGE_TARGET="$2"
+                TARGET="${3:-}"
+                VERSION="${4:-}"
+                ;;
+            *)
+                IMAGE_TARGET="all"
+                TARGET="${2:-}"
+                VERSION="${3:-}"
+                ;;
+        esac
         ;;
     build)
         ACTION="build"
+        case "${2:-}" in
+            all|server|web)
+                IMAGE_TARGET="$2"
+                TARGET="${3:-}"
+                ;;
+            *)
+                IMAGE_TARGET="all"
+                TARGET="${2:-}"
+                ;;
+        esac
+        ;;
+    all|server|web)
+        ACTION="build"
+        IMAGE_TARGET="$1"
         TARGET="${2:-}"
         ;;
     old|ka|both|none|1|2|3|0)
         ACTION="build"
+        IMAGE_TARGET="all"
         TARGET="$1"
         ;;
     "")
         ACTION="build"
+        IMAGE_TARGET="all"
         ;;
     *)
         echo "Ошибка: неизвестная команда '$1'." >&2
         echo "Допустимо:" >&2
         echo "  sh ./build_images.sh [old|ka|both|none]" >&2
+        echo "  sh ./build_images.sh [all|server|web] [old|ka|both|none]" >&2
         echo "  sh ./build_images.sh copy [old|ka|both] [version]" >&2
+        echo "  sh ./build_images.sh copy [all|server|web] [old|ka|both] [version]" >&2
         exit 1
         ;;
 esac
 
 TARGET=${BUILD_TARGET:-$TARGET}
 VERSION=${VERSION_OVERRIDE:-$VERSION}
+IMAGE_TARGET=${IMAGE_TARGET_OVERRIDE:-$IMAGE_TARGET}
+
+case "$IMAGE_TARGET" in
+    all|server|web) ;;
+    *)
+        echo "Ошибка: IMAGE_TARGET='$IMAGE_TARGET'. Допустимо: all, server, web." >&2
+        exit 1
+        ;;
+esac
 
 # Необязательный локальный shell-конфиг рядом со скриптом (не хранить в Git).
 # Загружать только доверенный файл; его значения имеют приоритет над окружением.
@@ -105,19 +151,18 @@ get_version_from_installer() {
     printf '%s\n' "$parsed_version"
 }
 
-detect_version_for_copy() {
-    if installer_version=$(get_version_from_installer 2>/dev/null); then
-        printf '%s\n' "$installer_version"
+detect_version_from_artifact() {
+    prefix=$1
+
+    set -- "./${prefix}-"*.tar
+    if [ -e "$1" ] && [ "$1" != "./${prefix}-*.tar" ] && [ "$#" -eq 1 ]; then
+        basename "$1" | sed -n "s/^${prefix}-\(.*\)\.tar$/\1/p"
         return 0
     fi
 
-    set -- ./1cserver-*.tar
-    if [ -e "$1" ] && [ "$1" != './1cserver-*.tar' ] && [ "$#" -eq 1 ]; then
-        basename "$1" | sed -n 's/^1cserver-\(.*\)\.tar$/\1/p'
-        return 0
-    fi
-
-    image_versions=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | sed -n 's/^1cserver:\(.*\)$/\1/p' | grep -v '^<none>$' || true)
+    image_versions=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null \
+        | sed -n "s/^${prefix}:\(.*\)$/\1/p" \
+        | grep -v '^<none>$' || true)
     image_count=$(printf '%s\n' "$image_versions" | sed '/^$/d' | wc -l | tr -d ' ')
 
     if [ "$image_count" = "1" ]; then
@@ -128,11 +173,54 @@ detect_version_for_copy() {
     return 1
 }
 
+detect_version_for_copy() {
+    if installer_version=$(get_version_from_installer 2>/dev/null); then
+        printf '%s\n' "$installer_version"
+        return 0
+    fi
+
+    case "$IMAGE_TARGET" in
+        server)
+            detect_version_from_artifact "1cserver"
+            return $?
+            ;;
+        web)
+            detect_version_from_artifact "1cweb"
+            return $?
+            ;;
+        all)
+            if detected=$(detect_version_from_artifact "1cserver" 2>/dev/null); then
+                printf '%s\n' "$detected"
+                return 0
+            fi
+            if detected=$(detect_version_from_artifact "1cweb" 2>/dev/null); then
+                printf '%s\n' "$detected"
+                return 0
+            fi
+            return 1
+            ;;
+    esac
+}
+
+print_selected_archives() {
+    case "$IMAGE_TARGET" in
+        server)
+            echo "  $SERVER_ARCHIVE"
+            ;;
+        web)
+            echo "  $WEB_ARCHIVE"
+            ;;
+        all)
+            echo "  $SERVER_ARCHIVE"
+            echo "  $WEB_ARCHIVE"
+            ;;
+    esac
+}
+
 choose_target() {
     echo
     echo "Куда копировать готовые архивы?"
-    echo "  $SERVER_ARCHIVE"
-    echo "  $WEB_ARCHIVE"
+    print_selected_archives
     echo
     echo "  1) $OLD_1C_NAME  ($OLD_1C_USER@$OLD_1C_HOST:$OLD_1C_DIR)"
     echo "  2) $KA_1C_NAME   ($KA_1C_USER@$KA_1C_HOST:$KA_1C_DIR)"
@@ -187,6 +275,21 @@ ensure_archive() {
     return 1
 }
 
+ensure_selected_archives() {
+    case "$IMAGE_TARGET" in
+        server)
+            ensure_archive "$SERVER_IMAGE" "$SERVER_ARCHIVE"
+            ;;
+        web)
+            ensure_archive "$WEB_IMAGE" "$WEB_ARCHIVE"
+            ;;
+        all)
+            ensure_archive "$SERVER_IMAGE" "$SERVER_ARCHIVE"
+            ensure_archive "$WEB_IMAGE" "$WEB_ARCHIVE"
+            ;;
+    esac
+}
+
 copy_archives() {
     server_name=$1
     server_user=$2
@@ -198,18 +301,37 @@ copy_archives() {
     echo "Копирование на: $server_name"
     echo "============================================================"
     echo "Файлы:"
-    echo "  $SERVER_ARCHIVE"
-    echo "  $WEB_ARCHIVE"
+    print_selected_archives
     echo "Адрес: $server_user@$server_host:$server_dir/"
     echo
 
-    scp "$SERVER_ARCHIVE" "$WEB_ARCHIVE" "$server_user@$server_host:$server_dir/"
+    case "$IMAGE_TARGET" in
+        server)
+            scp "$SERVER_ARCHIVE" "$server_user@$server_host:$server_dir/"
+            ;;
+        web)
+            scp "$WEB_ARCHIVE" "$server_user@$server_host:$server_dir/"
+            ;;
+        all)
+            scp "$SERVER_ARCHIVE" "$WEB_ARCHIVE" "$server_user@$server_host:$server_dir/"
+            ;;
+    esac
 
     echo
-    echo "Готово: оба архива скопированы на $server_name"
+    echo "Готово: архивы скопированы на $server_name"
     echo "Для загрузки образов на сервере:"
-    echo "  docker load -i $server_dir/$SERVER_ARCHIVE"
-    echo "  docker load -i $server_dir/$WEB_ARCHIVE"
+    case "$IMAGE_TARGET" in
+        server)
+            echo "  docker load -i $server_dir/$SERVER_ARCHIVE"
+            ;;
+        web)
+            echo "  docker load -i $server_dir/$WEB_ARCHIVE"
+            ;;
+        all)
+            echo "  docker load -i $server_dir/$SERVER_ARCHIVE"
+            echo "  docker load -i $server_dir/$WEB_ARCHIVE"
+            ;;
+    esac
 }
 
 if [ "$ACTION" = "build" ]; then
@@ -217,9 +339,9 @@ if [ "$ACTION" = "build" ]; then
 else
     if [ -z "$VERSION" ]; then
         if ! VERSION=$(detect_version_for_copy); then
-            echo "Ошибка: не удалось однозначно определить версию образов." >&2
+            echo "Ошибка: не удалось однозначно определить версию образа." >&2
             echo "Укажите её явно, например:" >&2
-            echo "  sh ./build_images.sh copy both 8.5.1.1529" >&2
+            echo "  sh ./build_images.sh copy $IMAGE_TARGET both 8.5.1.1529" >&2
             exit 1
         fi
     fi
@@ -231,12 +353,26 @@ SERVER_ARCHIVE="1cserver-${VERSION}.tar"
 WEB_ARCHIVE="1cweb-${VERSION}.tar"
 
 echo
-echo "Версия 1С:   $VERSION"
-echo "Server image: $SERVER_IMAGE"
-echo "Web image:    $WEB_IMAGE"
-echo "Server TAR:   $SERVER_ARCHIVE"
-echo "Web TAR:      $WEB_ARCHIVE"
-echo "Режим:        $ACTION"
+echo "Версия 1С:      $VERSION"
+echo "Режим:           $ACTION"
+echo "Компонент:       $IMAGE_TARGET"
+
+case "$IMAGE_TARGET" in
+    server)
+        echo "Image:           $SERVER_IMAGE"
+        echo "TAR:             $SERVER_ARCHIVE"
+        ;;
+    web)
+        echo "Image:           $WEB_IMAGE"
+        echo "TAR:             $WEB_ARCHIVE"
+        ;;
+    all)
+        echo "Server image:    $SERVER_IMAGE"
+        echo "Web image:       $WEB_IMAGE"
+        echo "Server TAR:      $SERVER_ARCHIVE"
+        echo "Web TAR:         $WEB_ARCHIVE"
+        ;;
+esac
 
 if [ "$ACTION" = "build" ]; then
     if [ "${FORCE_BASE_REBUILD:-0}" = "1" ]; then
@@ -254,40 +390,47 @@ if [ "$ACTION" = "build" ]; then
         docker build --platform linux/x86-64 -t onec_base Docker/onec_base
     fi
 
-    echo
-    echo "Сборка образа $SERVER_IMAGE..."
-    docker build \
-        --platform linux/x86-64 \
-        --build-arg VERSION="$VERSION" \
-        -t "$SERVER_IMAGE" \
-        -f Docker/server/Dockerfile \
-        Docker
+    case "$IMAGE_TARGET" in
+        server|all)
+            echo
+            echo "Сборка образа $SERVER_IMAGE..."
+            docker build \
+                --platform linux/x86-64 \
+                --build-arg VERSION="$VERSION" \
+                -t "$SERVER_IMAGE" \
+                -f Docker/server/Dockerfile \
+                Docker
 
-    echo
-    echo "Сборка образа $WEB_IMAGE..."
-    docker build \
-        --platform linux/x86-64 \
-        --build-arg VERSION="$VERSION" \
-        -t "$WEB_IMAGE" \
-        -f Docker/web/Dockerfile \
-        Docker
+            echo
+            echo "Сохранение образа в $SERVER_ARCHIVE..."
+            docker save -o "$SERVER_ARCHIVE" "$SERVER_IMAGE"
+            ;;
+    esac
 
-    echo
-    echo "Сохранение образа в $SERVER_ARCHIVE..."
-    docker save -o "$SERVER_ARCHIVE" "$SERVER_IMAGE"
+    case "$IMAGE_TARGET" in
+        web|all)
+            echo
+            echo "Сборка образа $WEB_IMAGE..."
+            docker build \
+                --platform linux/x86-64 \
+                --build-arg VERSION="$VERSION" \
+                -t "$WEB_IMAGE" \
+                -f Docker/web/Dockerfile \
+                Docker
 
-    echo "Сохранение образа в $WEB_ARCHIVE..."
-    docker save -o "$WEB_ARCHIVE" "$WEB_IMAGE"
+            echo
+            echo "Сохранение образа в $WEB_ARCHIVE..."
+            docker save -o "$WEB_ARCHIVE" "$WEB_IMAGE"
+            ;;
+    esac
 
     echo
     echo "Готово:"
-    echo "  $SERVER_ARCHIVE"
-    echo "  $WEB_ARCHIVE"
+    print_selected_archives
 else
     echo
     echo "Режим COPY: сборка Docker-образов пропущена."
-    ensure_archive "$SERVER_IMAGE" "$SERVER_ARCHIVE"
-    ensure_archive "$WEB_IMAGE" "$WEB_ARCHIVE"
+    ensure_selected_archives
 fi
 
 if [ -z "$TARGET" ]; then
@@ -329,8 +472,7 @@ case "$TARGET" in
         fi
         echo
         echo "Копирование пропущено. Архивы оставлены локально:"
-        echo "  $SERVER_ARCHIVE"
-        echo "  $WEB_ARCHIVE"
+        print_selected_archives
         ;;
     *)
         echo "Ошибка: TARGET='$TARGET'. Допустимо: old, ka, both, none." >&2
@@ -338,11 +480,13 @@ case "$TARGET" in
         ;;
 esac
 
-echo
-echo "============================================================"
-echo "Команда для запуска образа $SERVER_IMAGE:"
-echo "============================================================"
-cat <<EOF_SERVER
+case "$IMAGE_TARGET" in
+    server|all)
+        echo
+        echo "============================================================"
+        echo "Команда для запуска образа $SERVER_IMAGE:"
+        echo "============================================================"
+        cat <<EOF_SERVER
 docker run -d \
     --name 1cserver-$VERSION \
     --restart unless-stopped \
@@ -356,12 +500,16 @@ docker run -d \
     -v /_SHARE/exchange:/_SHARE/exchange \
     $SERVER_IMAGE
 EOF_SERVER
+        ;;
+esac
 
-echo
-echo "============================================================"
-echo "Команда для запуска образа $WEB_IMAGE:"
-echo "============================================================"
-cat <<EOF_WEB
+case "$IMAGE_TARGET" in
+    web|all)
+        echo
+        echo "============================================================"
+        echo "Команда для запуска образа $WEB_IMAGE:"
+        echo "============================================================"
+        cat <<EOF_WEB
 docker run -d \
     --name 1cweb-$VERSION \
     --restart unless-stopped \
@@ -369,3 +517,5 @@ docker run -d \
     -v /var/www/mcp-api:/var/www/mcp-api:ro \
     $WEB_IMAGE
 EOF_WEB
+        ;;
+esac
