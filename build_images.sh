@@ -515,6 +515,7 @@ docker run -d \
     --restart unless-stopped \
     --network host \
     -v /var/www/mcp-api:/var/www/mcp-api:ro \
+    -v /opt/1c/web-pub:/var/www/1c-pub:ro \
     $WEB_IMAGE
 EOF_WEB
         ;;
