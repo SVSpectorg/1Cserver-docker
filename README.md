@@ -194,6 +194,7 @@ docker run -d \
   --restart unless-stopped \
   --network host \
   -v /var/www/mcp-api:/var/www/mcp-api:ro \
+  -v /opt/1c/web-pub:/var/www/1c-pub:ro \
   1cweb:<version>
 ```
 
@@ -222,6 +223,23 @@ MCP -> host Apache HTTPS -> 127.0.0.1:8081 -> 1cweb -> 1C server
 ```
 
 TLS, IP allowlist и reverse proxy рекомендуется оставлять на Apache хоста, а web-контейнер не публиковать напрямую в сеть.
+
+
+### Постоянные публикации 1С
+
+На хосте создайте каталог `/opt/1c/web-pub`. Каждая база размещается в отдельной подпапке с собственным `default.vrd`:
+
+```text
+/opt/1c/web-pub/
+  odata/default.vrd
+  another_base/default.vrd
+```
+
+Папка подключается к `1cweb` только для чтения (`/var/www/1c-pub`). При запуске контейнер автоматически регистрирует в Apache каждый каталог `/var/www/1c-pub/<имя>/default.vrd` через `Alias` и `ManagedApplicationDescriptor`. Допускаются имена только из латинских букв, цифр, подчёркиваний и дефисов. Каталог `/var/www/mcp-api` по-прежнему поддерживается независимо.
+
+Пример: `/opt/1c/web-pub/odata/default.vrd` с `base="/odata"` создаёт публикацию на внутреннем Apache по пути `http://127.0.0.1:8081/odata/odata/standard.odata/`. Внешний адрес `https://1c.server/ut_fidarov_n_v/standard.odata/` обеспечивается **Apache на хосте**, который проксирует этот внутренний URL. Настройки TLS, IP allowlist и reverse proxy не входят в образ `1cweb`.
+
+Не монтируйте весь `/etc/apache2`: изменения `webinst`, записанные непосредственно в Apache контейнера, не сохраняются между пересозданиями. Сохраните `default.vrd` в каталоге хоста; после изменения списка дескрипторов пересоздайте контейнер либо перечитайте конфигурацию в рамках отдельной процедуры развёртывания. Перед пересозданием контейнера с существующими публикациями перенесите их `default.vrd` на хост. Приватные ключи и пароли не храните в репозитории.
 
 ## Примечания
 

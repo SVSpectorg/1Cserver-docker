@@ -17,7 +17,7 @@ RUN chmod 755 /tmp/setup-full.run \
 
 ENV SERVER_VERSION=${VERSION}
 
-RUN mkdir -p /var/www/mcp-api /var/www/html \
+RUN mkdir -p /var/www/mcp-api /var/www/1c-pub /var/www/html \
     && printf 'ok\n' > /var/www/html/health \
     && printf 'Listen 127.0.0.1:8081\n' > /etc/apache2/ports.conf \
     && rm -f /etc/apache2/sites-enabled/000-default.conf \
